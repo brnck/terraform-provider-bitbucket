@@ -71,3 +71,5 @@ $ BITBUCKET_USERNAME=myUsername BITBUCKET_PASSWORD=myPassword BITBUCKET_MEMBER_A
 Every data source or resource added must have an accompanying docs page (see `docs` directory for examples).
 
 Docs are written using Markdown, and you can use [this page](https://registry.terraform.io/tools/doc-preview) to preview what your docs will look like when rendered.
+
+
