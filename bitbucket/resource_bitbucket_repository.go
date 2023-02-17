@@ -81,6 +81,12 @@ func resourceBitbucketRepository() *schema.Resource {
 				Optional:    true,
 				Default:     false,
 			},
+			"main_branch_name": {
+				Description: "The name of the main branch of the repository.",
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "master",
+			},
 		},
 	}
 }
@@ -114,6 +120,17 @@ func resourceBitbucketRepositoryCreate(ctx context.Context, resourceData *schema
 	)
 	if err != nil {
 		return diag.FromErr(fmt.Errorf("unable to enable pipelines for repository with error: %s", err))
+	}
+
+	_, err = client.Repositories.Repository.CreateBranch(
+		&gobb.RepositoryBranchCreationOptions{
+			Owner:    resourceData.Get("workspace").(string),
+			RepoSlug: resourceData.Get("name").(string),
+			Name:     resourceData.Get("main_branch_name").(string),
+		},
+	)
+	if err != nil {
+		return diag.FromErr(fmt.Errorf("unable to create default master branch for repository with error: %s", err))
 	}
 
 	return resourceBitbucketRepositoryRead(ctx, resourceData, meta)
@@ -160,6 +177,20 @@ func resourceBitbucketRepositoryRead(ctx context.Context, resourceData *schema.R
 		_ = resourceData.Set("enable_pipelines", false)
 	} else {
 		_ = resourceData.Set("enable_pipelines", repositoryPipelineConfig.Enabled)
+	}
+
+	repositoryMainBranchConfig, err := client.Repositories.Repository.GetBranch(
+		&gobb.RepositoryBranchOptions{
+			Owner:      resourceData.Get("workspace").(string),
+			RepoSlug:   resourceData.Get("name").(string),
+			BranchName: "master",
+		},
+	)
+	if err != nil {
+		return diag.FromErr(fmt.Errorf("unable to get main branch configuration for repository with error: %s", err))
+		_ = resourceData.Set("main_branch_name", "")
+	} else {
+		_ = resourceData.Set("main_branch_name", repositoryMainBranchConfig.Name)
 	}
 
 	return nil
