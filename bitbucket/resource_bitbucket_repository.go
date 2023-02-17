@@ -187,8 +187,8 @@ func resourceBitbucketRepositoryRead(ctx context.Context, resourceData *schema.R
 		},
 	)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("unable to get main branch configuration for repository with error: %s", err))
 		_ = resourceData.Set("main_branch_name", "")
+		return diag.FromErr(fmt.Errorf("unable to get main branch configuration for repository with error: %s", err))
 	} else {
 		_ = resourceData.Set("main_branch_name", repositoryMainBranchConfig.Name)
 	}
