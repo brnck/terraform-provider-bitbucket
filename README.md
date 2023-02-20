@@ -13,7 +13,7 @@ provider "bitbucket" {
 terraform {
   required_providers {
     bitbucket = {
-      source  = "zahiar/bitbucket"
+      source  = "brnck/bitbucket"
     }
   }
 }
