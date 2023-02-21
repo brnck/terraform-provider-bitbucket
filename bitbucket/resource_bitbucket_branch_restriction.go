@@ -2,7 +2,9 @@ package bitbucket
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/mitchellh/mapstructure"
 	"strconv"
 	"strings"
 
@@ -131,23 +133,32 @@ func resourceBitbucketBranchRestrictionCreate(ctx context.Context, resourceData 
 func resourceBitbucketBranchRestrictionRead(ctx context.Context, resourceData *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*Clients).V2
 
-	branchRestriction, err := client.Repositories.BranchRestrictions.Get(
-		&gobb.BranchRestrictionsOptions{
-			Owner:    resourceData.Get("workspace").(string),
-			RepoSlug: resourceData.Get("repository").(string),
-			ID:       resourceData.Get("id").(string),
-		},
-	)
+	bro := &gobb.BranchRestrictionsOptions{
+		Owner:    resourceData.Get("workspace").(string),
+		RepoSlug: resourceData.Get("repository").(string),
+		ID:       resourceData.Get("id").(string),
+	}
+
+	branchRestriction, err := client.Repositories.BranchRestrictions.Get(bro)
 	if err != nil {
 		// Handles a case whereby if the branch restrictions were deleted after being provisioned, Bitbucket's API
 		// returns a 404, so we treat that as the item having been deleted, therefore Terraform will re-provision
 		// if necessary.
 		if err.Error() == "404 Not Found" {
-			resourceData.SetId("")
-			return nil
-		}
+			// If branch restriction was deleted and created afterwards manually, it changes the ID, so we can try to
+			// check in the list of the branch restrictions and identify if it is really not present
+			branchRestriction, err = getBranchRestrictionFromTheList(client, bro, resourceData)
+			if err != nil {
+				if err.Error() == "404 Not Found" {
+					resourceData.SetId("")
+					return nil
+				}
 
-		return diag.FromErr(fmt.Errorf("unable to get branch restriction with error: %s", err))
+				return diag.FromErr(fmt.Errorf("unable to get branch restriction with error: %s", err))
+			}
+		} else {
+			return diag.FromErr(fmt.Errorf("unable to get branch restriction with error: %s", err))
+		}
 	}
 
 	_ = resourceData.Set("pattern", branchRestriction.Pattern)
@@ -246,4 +257,36 @@ func parseBranchRestrictionUserGroupFields(groups []interface{}) map[string]stri
 	}
 
 	return groupsMap
+}
+
+func getBranchRestrictionFromTheList(
+	client *gobb.Client,
+	bro *gobb.BranchRestrictionsOptions,
+	resourceData *schema.ResourceData,
+) (*gobb.BranchRestrictions, error) {
+	branchRestrictions, err := client.Repositories.BranchRestrictions.Gets(bro)
+	diag.Errorf("%v", branchRestrictions)
+	if err != nil {
+		if err.Error() == "404 Not Found" {
+			return nil, err
+		}
+
+		return nil, err
+	}
+
+	restrictions := branchRestrictions.(map[string]interface{})
+	for _, item := range restrictions["values"].([]interface{}) {
+		branchMap := item.(map[string]interface{})
+
+		var restriction = new(gobb.BranchRestrictions)
+		if err := mapstructure.Decode(branchMap, restriction); err != nil {
+			return nil, err
+		}
+
+		if restriction.Kind == resourceData.Get("kind").(string) && restriction.Pattern == resourceData.Get("pattern").(string) {
+			return restriction, nil
+		}
+	}
+
+	return nil, errors.New("404 Not Found")
 }
