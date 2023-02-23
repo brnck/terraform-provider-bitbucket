@@ -3,10 +3,12 @@ package bitbucket
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+	"unsafe"
 
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -89,6 +91,7 @@ func resourceBitbucketRepositoryCreate(ctx context.Context, resourceData *schema
 	client := meta.(*Clients).V2
 
 	workspace := resourceData.Get("workspace").(string)
+	repoSlug := resourceData.Get("name").(string)
 
 	repository, err := client.Repositories.Repository.Create(
 		&gobb.RepositoryOptions{
@@ -99,13 +102,12 @@ func resourceBitbucketRepositoryCreate(ctx context.Context, resourceData *schema
 			IsPrivate:   strconv.FormatBool(resourceData.Get("is_private").(bool)),
 			HasWiki:     strconv.FormatBool(resourceData.Get("has_wiki").(bool)),
 			ForkPolicy:  resourceData.Get("fork_policy").(string),
+			Scm:         "git",
 		},
 	)
 	if err != nil {
 		return diag.FromErr(fmt.Errorf("unable to create repository with error: %s", err))
 	}
-
-	resourceData.SetId(repository.Uuid)
 
 	_, err = client.Repositories.Repository.UpdatePipelineConfig(
 		&gobb.RepositoryPipelineOptions{
@@ -122,6 +124,13 @@ func resourceBitbucketRepositoryCreate(ctx context.Context, resourceData *schema
 	// during runtime
 	if len(repositoriesCache[workspace]) != 0 {
 		repositoriesCache[workspace][repository.Slug] = *repository
+	}
+
+	url := requestUrl("/repositories/%s/%s/src", client, workspace, repoSlug)
+	_, err = executeMasterBranchInit("POST", url, client)
+
+	if err != nil {
+		return diag.FromErr(fmt.Errorf("unable to make initial commit in default master branch for repository with error: %s", err))
 	}
 
 	return resourceBitbucketRepositoryRead(ctx, resourceData, meta)
@@ -280,4 +289,37 @@ func warmUpRepositoriesCacheInTheWorkspace(client *gobb.Client, workspace string
 	repositoriesCache[workspace] = tempRepositories
 
 	return nil
+}
+
+func requestUrl(template string, client *gobb.Client, args ...interface{}) string {
+	if len(args) == 1 && args[0] == "" {
+		return client.GetApiBaseURL() + template
+	}
+	url := client.GetApiBaseURL() + fmt.Sprintf(template, args...)
+
+	return url
+}
+
+func executeMasterBranchInit(method string, urlStr string, client *gobb.Client) (interface{}, error) {
+	req, err := http.NewRequest(method, urlStr, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	username := getUnexportedField(reflect.ValueOf(client.Auth).Elem().FieldByName("user")).(string)
+	password := getUnexportedField(reflect.ValueOf(client.Auth).Elem().FieldByName("password")).(string)
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth(username, password)
+
+	_, err = client.HttpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, err
+}
+
+func getUnexportedField(field reflect.Value) interface{} {
+	return reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem().Interface()
 }
