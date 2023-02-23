@@ -109,6 +109,8 @@ func resourceBitbucketRepositoryCreate(ctx context.Context, resourceData *schema
 		return diag.FromErr(fmt.Errorf("unable to create repository with error: %s", err))
 	}
 
+	resourceData.SetId(repository.Uuid)
+
 	_, err = client.Repositories.Repository.UpdatePipelineConfig(
 		&gobb.RepositoryPipelineOptions{
 			Owner:    workspace,
