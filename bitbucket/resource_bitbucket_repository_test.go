@@ -47,6 +47,7 @@ func TestAccBitbucketRepositoryResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "project_key", projectKey),
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "description", ""),
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "is_private", "true"),
+					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "has_issues", "false"),
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "has_wiki", "false"),
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "fork_policy", "no_forks"),
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "enable_pipelines", "false"),
@@ -78,6 +79,7 @@ func TestAccBitbucketRepositoryResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "project_key", projectKey),
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "description", repoDescription),
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "is_private", "true"),
+					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "has_issues", "false"),
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "has_wiki", "false"),
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "fork_policy", repoForkPolicy),
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "enable_pipelines", "false"),
@@ -103,6 +105,7 @@ func TestAccBitbucketRepositoryResource_basic(t *testing.T) {
 					  description      = "%s"
 					  fork_policy      = "%s"
 					  enable_pipelines = true
+					  has_issues       = true	
 					  has_wiki         = true
 					}`, workspaceSlug, projectName, projectKey, repoName, repoDescription, repoForkPolicy),
 				Check: resource.ComposeTestCheckFunc(
@@ -111,6 +114,7 @@ func TestAccBitbucketRepositoryResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "project_key", projectKey),
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "description", repoDescription),
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "is_private", "true"),
+					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "has_issues", "true"),
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "has_wiki", "true"),
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "fork_policy", repoForkPolicy),
 					resource.TestCheckResourceAttr("bitbucket_repository.testacc", "enable_pipelines", "true"),
