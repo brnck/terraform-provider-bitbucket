@@ -61,6 +61,12 @@ func resourceBitbucketRepository() *schema.Resource {
 				Optional:    true,
 				Default:     true,
 			},
+			"has_issues": {
+				Description: "A boolean to state if the repository includes issues or not.",
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+			},
 			"has_wiki": {
 				Description: "A boolean to state if the repository includes a wiki or not.",
 				Type:        schema.TypeBool,
@@ -100,6 +106,7 @@ func resourceBitbucketRepositoryCreate(ctx context.Context, resourceData *schema
 			Description: resourceData.Get("description").(string),
 			Project:     resourceData.Get("project_key").(string),
 			IsPrivate:   strconv.FormatBool(resourceData.Get("is_private").(bool)),
+			HasIssues:   strconv.FormatBool(resourceData.Get("has_issues").(bool)),
 			HasWiki:     strconv.FormatBool(resourceData.Get("has_wiki").(bool)),
 			ForkPolicy:  resourceData.Get("fork_policy").(string),
 			Scm:         "git",
@@ -157,6 +164,7 @@ func resourceBitbucketRepositoryRead(ctx context.Context, resourceData *schema.R
 	_ = resourceData.Set("description", repository.Description)
 	_ = resourceData.Set("project_key", repository.Project.Key)
 	_ = resourceData.Set("is_private", repository.Is_private)
+	_ = resourceData.Set("has_issues", repository.Has_issues)
 	_ = resourceData.Set("has_wiki", repository.Has_wiki)
 	_ = resourceData.Set("fork_policy", repository.Fork_policy)
 
@@ -197,6 +205,7 @@ func resourceBitbucketRepositoryUpdate(ctx context.Context, resourceData *schema
 			Description: resourceData.Get("description").(string),
 			Project:     resourceData.Get("project_key").(string),
 			IsPrivate:   strconv.FormatBool(resourceData.Get("is_private").(bool)),
+			HasIssues:   strconv.FormatBool(resourceData.Get("has_issues").(bool)),
 			HasWiki:     strconv.FormatBool(resourceData.Get("has_wiki").(bool)),
 			ForkPolicy:  resourceData.Get("fork_policy").(string),
 		},
